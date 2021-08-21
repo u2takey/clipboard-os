@@ -80,7 +80,7 @@ func main() {
 			log.Printf("[Handle] Method=Post Content-Length=%d", request.ContentLength)
 			if *SizeLimit > 0 && request.ContentLength > *SizeLimit {
 				writer.WriteHeader(400)
-				_, _ = writer.Write([]byte(err.Error()))
+				_, _ = writer.Write([]byte(fmt.Sprintf("content size out of limit: %d", *SizeLimit)))
 				return
 			}
 			name := fmt.Sprintf("%s/%s", time.Now().Format("20060102"), randString(16))
@@ -88,8 +88,13 @@ func main() {
 				ObjectPutHeaderOptions: &cos.ObjectPutHeaderOptions{},
 			})
 			if err != nil {
-				writer.WriteHeader(400)
-				_, _ = writer.Write([]byte(err.Error()))
+				if resp != nil {
+					writer.WriteHeader(resp.StatusCode)
+				} else {
+					writer.WriteHeader(400)
+				}
+				log.Printf("[Handle] put file failed: %s", err)
+				_, _ = writer.Write([]byte("put file failed"))
 				return
 			}
 			writer.WriteHeader(resp.StatusCode)
@@ -99,13 +104,19 @@ func main() {
 			log.Printf("[Handle] Method=Get Name=%s", name)
 			if err != nil {
 				writer.WriteHeader(400)
-				_, _ = writer.Write([]byte(err.Error()))
+				log.Printf("[Handle] file not valid: %s", err)
+				_, _ = writer.Write([]byte("file name not valid"))
 				return
 			}
 			resp, err := client.Object.Get(ctx, name, nil)
 			if err != nil {
-				writer.WriteHeader(400)
-				_, _ = writer.Write([]byte(err.Error()))
+				if resp != nil {
+					writer.WriteHeader(resp.StatusCode)
+				} else {
+					writer.WriteHeader(400)
+				}
+				log.Printf("[Handle] get file failed: %s", err)
+				_, _ = writer.Write([]byte("get file failed"))
 				return
 			}
 			data, _ := ioutil.ReadAll(resp.Body)
