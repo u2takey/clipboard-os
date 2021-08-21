@@ -24,6 +24,7 @@ var (
 	SizeLimit  = flag.Int64("size_limit", 1024*1024*10, "size limit for object in byte")
 	OSSecret   = flag.String("os_secret", "::", "secret key for object storage, format: key:id:session")
 	BucketUrl  = flag.String("bucket_url", "", "bucket_url for object storage")
+	NameLength = flag.Int("name_length", 4, "name length for object put")
 )
 
 func main() {
@@ -83,7 +84,7 @@ func main() {
 				_, _ = writer.Write([]byte(fmt.Sprintf("content size out of limit: %d", *SizeLimit)))
 				return
 			}
-			name := fmt.Sprintf("%s/%s", time.Now().Format("20060102"), randString(16))
+			name := fmt.Sprintf("%s/%s", time.Now().Format("20060102"), randName())
 			resp, err := client.Object.Put(ctx, name, request.Body, &cos.ObjectPutOptions{
 				ObjectPutHeaderOptions: &cos.ObjectPutHeaderOptions{},
 			})
@@ -162,12 +163,12 @@ func expireJob(client *cos.Client) {
 	}
 }
 
-var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+var letters = []rune("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-func randString(n int) string {
-	b := make([]rune, n)
+func randName() string {
+	b := make([]rune, *NameLength)
 	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+		b[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(b)
 }
@@ -177,7 +178,7 @@ func encodeName(a string) string {
 }
 
 func decodeName(a string) (string, error) {
-	if len(a) != 24 {
+	if len(a) != 8+*NameLength {
 		return "", errors.New("invalid name")
 	}
 	return a[:8] + "/" + a[8:], nil
