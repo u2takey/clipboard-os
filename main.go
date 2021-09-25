@@ -133,6 +133,7 @@ func expireJob(client *cos.Client) {
 		log.Println("do expire....")
 		expireTo := time.Now().Add(-1 * *DefaultTTL)
 
+		var cleaned []string
 		for day := 1; day <= 30; day++ {
 			toDelDay := expireTo.Add(time.Duration(day) * time.Hour * 24 * -1)
 			name := toDelDay.Format("20060102") + "/"
@@ -156,10 +157,11 @@ func expireJob(client *cos.Client) {
 			if resp.StatusCode != 200 {
 				log.Println("delete object failed, ", resp.Status)
 			} else {
+				cleaned = append(cleaned, name)
 				log.Printf("expire old folder: %s success", name)
 			}
 		}
-		log.Println("do expire done")
+		log.Println("do expire done:", cleaned)
 	}
 }
 
